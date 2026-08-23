@@ -8,6 +8,22 @@
     <main>
         <div class="top-row px-4">
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+
+            <AuthorizeView>
+                <Authorized>
+                    <span class="nav-link">Hello, @context.User.Identity?.Name</span>
+                    <form action="Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="returnUrl" value="" />
+                        <button type="submit" class="nav-link">
+                            Logout
+                        </button>
+                    </form>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="Account/Login" class="nav-link">Login</a>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4">
