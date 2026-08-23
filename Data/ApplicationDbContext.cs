@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Inambu_Manufacturing_Pty.Models;
+using System.Diagnostics.Metrics;
 
 namespace Inambu_Manufacturing_Pty.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
   public DbSet<ProductionLine> ProductionLines { get; set; } // registering the productionLine model
+  public DbSet<Measurement> Measurements { get; set; }
 
   protected override void OnModelCreating(ModelBuilder builder)
   {
