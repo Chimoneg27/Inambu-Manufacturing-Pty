@@ -51,6 +51,10 @@ else
 
 app.UseHttpsRedirection();
 
+app.MapPost("/Account/Logout", async (SignInManager<ApplicatitonUser> sigInManager) => {
+    await sigInManager.SignOutAsync();
+    return Results.Redirect("/");
+});
 
 app.UseAntiforgery();
 
