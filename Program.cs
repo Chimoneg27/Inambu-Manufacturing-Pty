@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Inambu_Manufacturing_Pty.Components;
 using Inambu_Manufacturing_Pty.Components.Account;
 using Inambu_Manufacturing_Pty.Data;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,7 +30,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = false)
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
@@ -51,10 +53,15 @@ else
 
 app.UseHttpsRedirection();
 
-app.MapPost("/Account/Logout", async (SignInManager<ApplicatitonUser> sigInManager) => {
-    await sigInManager.SignOutAsync();
-    return Results.Redirect("/");
-});
+// the logout logic for users using the POST method
+// app.MapPost("/Account/Logout", async (
+//     ClaimsPrincipal user, // clears the auth cookies
+//     SignInManager<ApplicationUser> signInManager,
+//     [FromForm] string returnUrl) =>
+// {
+//     await signInManager.SignOutAsync(); // actual logout it clears the authentication cookie server-side.
+//     return TypedResults.LocalRedirect($"~/{returnUrl}");
+// });
 
 app.UseAntiforgery();
 
