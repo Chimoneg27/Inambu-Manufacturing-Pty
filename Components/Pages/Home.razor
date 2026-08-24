@@ -1,7 +1,128 @@
 ﻿@page "/"
+@using Microsoft.EntityFrameworkCore
+@using Inambu_Manufacturing_Pty.Data
+@using Inambu_Manufacturing_Pty.Models
+@rendermode InteractiveServer 
+@using System.Security.Claims;
+@inject ApplicationDbContext DbContext
+@inject AuthenticationStateProvider AuthProvider
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Inambu Manufacturing (Pty) Ltd</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1 class="mb-6">Quality Control Measurement Capture</h1>
 
-Welcome to your new app.
+<EditForm Model="Input" OnValidSubmit="AddMeasurements" FormName="measurementForm" class="row g-3">
+  <DataAnnotationsValidator />
+
+  <div class="col-md-6">
+    <label for="productionLine" class="form-label">Production Line</label>
+    <select @bind="Input.ProductionLineId" class="form-select">
+      @foreach (var productLine in ProductionLines)
+      {
+        <option value="@productLine.Id">@productLine.Name</option>
+      }
+    </select>
+  </div>
+
+  <div class="col-md-6">
+    <label for="temperature" class="form-label">Temperature</label>
+    <input type="number" class="form-control" step="0.01" @bind="Input.Temperature" @bind:event="oninput">
+  </div>
+
+  <div class="col-md-6">
+    <label for="humidity" class="form-label">Humidity</label>
+    <input type="number" class="form-control" step="0.01" @bind="Input.Humidity" @bind:event="oninput">
+  </div>
+
+  <div class="col-md-6">
+    <label for="weight" class="form-label">Weight</label>
+    <input type="number" class="form-control" step="0.01" @bind="Input.Weight" @bind:event="oninput">
+  </div>
+
+  <div class="col-md-6">
+    <label for="width" class="form-label">Width</label>
+    <input type="number" class="form-control" step="0.01" @bind="Input.Width" @bind:event="oninput">
+  </div>
+
+  <div class="col-md-6">
+    <label for="length" class="form-label">Length</label>
+    <input type="number" class="form-control" step="0.01" @bind="Input.Length" @bind:event="oninput">
+  </div>
+
+  <div class="col-md-6">
+    <label for="depth" class="form-label">Depth</label>
+    <input type="number" class="form-control" step="0.01" @bind="Input.Depth" @bind:event="oninput">
+  </div>
+
+  <div class="col-md-6">
+    <label for="passed" class="form-label">Passed</label>
+    <input type="checkbox" class="form-check-input" style="transform: scale(1.5);" @bind="Input.Passed">
+  </div>
+
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+</EditForm>
+
+@code {
+  private List<Measurement> Measurements = new(); // the list of measurements
+
+  private MeasurementInput Input { get; set; } = new(); // so this holds the values that that the user enters into the form
+  private List<ProductionLine> ProductionLines = new(); // holds the productions lines we will select
+
+  protected override async Task OnInitializedAsync()
+  {
+    Measurements = await DbContext.Measurements.ToListAsync(); // this fetches every measurement entry we have
+    ProductionLines = await DbContext.ProductionLines.ToListAsync();
+
+    if (ProductionLines.Any() && Input.ProductionLineId == 0)
+    {
+      Input.ProductionLineId = ProductionLines.First().Id;
+    }
+  }
+
+  private async Task AddMeasurements()
+  {
+    var authState = await AuthProvider.GetAuthenticationStateAsync();
+    var userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier); // grabs the logged in user's id
+
+    if (string.IsNullOrWhiteSpace(userId))
+    {
+      throw new InvalidOperationException("Authenticated user ID could not be found.");
+    }
+
+    var measurement = new Measurement // the shape of the measurement we will make
+    {
+      Temperature = Input.Temperature,
+      Humidity = Input.Humidity,
+      Weight = Input.Weight,
+      Width = Input.Width,
+      Length = Input.Length,
+      Depth = Input.Depth,
+      Passed = Input.Passed,
+
+      CapturedAtUtc = DateTime.UtcNow,
+      ApplicationUserId = userId,
+
+      ProductionLineId = Input.ProductionLineId
+    };
+
+    DbContext.Measurements.Add(measurement); // stage the new measurement entry in memory
+    await DbContext.SaveChangesAsync(); // then we we write it to our sql server
+    
+    Input = new(); // clear the form after successful submission
+  }
+
+  public class MeasurementInput
+  {
+    public decimal Temperature { get; set; }
+    public decimal Humidity { get; set; }
+    public decimal Weight { get; set; }
+    public decimal Width { get; set; }
+    public decimal Length { get; set; }
+    public decimal Depth { get; set; }
+    public bool Passed { get; set; }
+
+    public int ProductionLineId { get; set; }
+  }
+}

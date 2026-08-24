@@ -11,7 +11,7 @@ public class Measurement
   public decimal Width { get; set; }
   public decimal Length { get; set; }
   public decimal Depth { get; set; }
-  public bool Passed { get; set; }
+  public bool Passed { get; set; } = false;
   public DateTime CapturedAtUtc { get; set; }
 
   public int ProductionLineId { get; set; }
