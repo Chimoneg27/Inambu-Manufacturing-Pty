@@ -1,0 +1,128 @@
+@page "/measurements/edit/{Id:int}"
+@using Microsoft.EntityFrameworkCore
+@using Inambu_Manufacturing_Pty.Data
+@using Inambu_Manufacturing_Pty.Models
+@rendermode InteractiveServer 
+@using System.Security.Claims;
+@inject ApplicationDbContext DbContext
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavigationManager
+
+<EditForm Model="Input" OnValidSubmit="SaveChange" FormName="editCapture">
+    <DataAnnotationsValidator />
+
+  <div class="col-md-6">
+    <label for="productionLine" class="form-label">Production Line</label>
+    <select @bind="Input.ProductionLineId" class="form-select">
+      @foreach (var productLine in ProductionLines)
+      {
+        <option value="@productLine.Id">@productLine.Name</option>
+      }
+    </select>
+  </div>
+
+  <div class="col-md-6">
+    <label for="temperature" class="form-label">Temperature</label>
+    <input type="number" class="form-control" step="0.01" @bind="Input.Temperature" @bind:event="oninput">
+  </div>
+
+  <div class="col-md-6">
+    <label for="humidity" class="form-label">Humidity</label>
+    <input type="number" class="form-control" step="0.01" @bind="Input.Humidity" @bind:event="oninput">
+  </div>
+
+  <div class="col-md-6">
+    <label for="weight" class="form-label">Weight</label>
+    <input type="number" class="form-control" step="0.01" @bind="Input.Weight" @bind:event="oninput">
+  </div>
+
+  <div class="col-md-6">
+    <label for="width" class="form-label">Width</label>
+    <input type="number" class="form-control" step="0.01" @bind="Input.Width" @bind:event="oninput">
+  </div>
+
+  <div class="col-md-6">
+    <label for="length" class="form-label">Length</label>
+    <input type="number" class="form-control" step="0.01" @bind="Input.Length" @bind:event="oninput">
+  </div>
+
+  <div class="col-md-6">
+    <label for="depth" class="form-label">Depth</label>
+    <input type="number" class="form-control" step="0.01" @bind="Input.Depth" @bind:event="oninput">
+  </div>
+
+  <div class="col-md-6">
+    <label for="passed" class="form-label">Passed</label>
+    <input type="checkbox" class="form-check-input" style="transform: scale(1.5);" @bind="Input.Passed">
+  </div>
+
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+</EditForm>
+
+@code {
+  [Parameter]
+  public int Id { get; set; }
+
+  private CaptureInput Input = new();
+  private Measurement? ExistingMeasurement;
+  private List<ProductionLine> ProductionLines = new();
+
+  protected override async Task OnInitializedAsync()
+  {
+    ProductionLines = await DbContext.ProductionLines.ToListAsync();
+    ExistingMeasurement = await DbContext.Measurements.FirstOrDefaultAsync(m => m.Id == Id);
+
+    if (ExistingMeasurement is null)
+    {
+      NavigationManager.NavigateTo("/");
+      return;
+    }
+
+    var authState = await AuthProvider.GetAuthenticationStateAsync();
+    var userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if (ExistingMeasurement.ApplicationUserId != userId)
+    {
+      NavigationManager.NavigateTo("/");
+      return;
+    }
+
+    Input.Depth = ExistingMeasurement.Depth;
+    Input.Humidity = ExistingMeasurement.Humidity;
+    Input.Length = ExistingMeasurement.Length;
+    Input.Passed = ExistingMeasurement.Passed;
+    Input.Temperature = ExistingMeasurement.Temperature;
+    Input.Weight = ExistingMeasurement.Weight;
+    Input.Width = ExistingMeasurement.Width;
+    Input.ProductionLineId = ExistingMeasurement.ProductionLineId;
+  }
+
+  private async Task SaveChange()
+  {
+    ExistingMeasurement!.Depth = Input.Depth;
+    ExistingMeasurement!.Humidity = Input.Humidity;
+    ExistingMeasurement!.Length = Input.Length;
+    ExistingMeasurement!.Passed = Input.Passed;
+    ExistingMeasurement!.Temperature = Input.Temperature;
+    ExistingMeasurement!.Weight = Input.Weight;
+    ExistingMeasurement!.Width = Input.Width;
+    ExistingMeasurement!.ProductionLineId = Input.ProductionLineId;
+
+    await DbContext.SaveChangesAsync();
+    NavigationManager.NavigateTo("/");
+  }
+
+  private class CaptureInput
+  {
+    public decimal Temperature { get; set; }
+    public decimal Humidity { get; set; }
+    public decimal Weight { get; set; }
+    public decimal Width { get; set; }
+    public decimal Length { get; set; }
+    public decimal Depth { get; set; }
+    public bool Passed { get; set; }
+    public int ProductionLineId { get; set; }
+  }
+}
