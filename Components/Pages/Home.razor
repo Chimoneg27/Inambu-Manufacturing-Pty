@@ -33,12 +33,12 @@
         {
           <tr>
             <td>@stat.Key</td>
-            <td>@stat.Value.Highest</td>
-            <td>@stat.Value.Lowest</td>
-            <td>@stat.Value.Variance</td>
-            <td>@stat.Value.Mean</td>
-            <td>@stat.Value.Sum</td>
-            <td>@stat.Value.StandardDeviation</td>
+            <td>@stat.Value.Highest.ToString("F2")</td>
+            <td>@stat.Value.Lowest.ToString("F2")</td>
+            <td>@stat.Value.Variance.ToString("F2")</td>
+            <td>@stat.Value.Mean.ToString("F2")</td>
+            <td>@stat.Value.Sum.ToString("F2")</td>
+            <td>@stat.Value.StandardDeviation.ToString("F2")</td>
           </tr>
         }
       </tbody>
@@ -161,8 +161,6 @@
 
   protected override async Task OnInitializedAsync()
   {
-    Measurements = await DbContext.Measurements.Include(m => m.ApplicationUser).ToListAsync(); // this fetches every
-
     ProductionLines = await DbContext.ProductionLines.ToListAsync();
 
     var authState = await AuthProvider.GetAuthenticationStateAsync();
@@ -197,8 +195,6 @@
 
     DbContext.Measurements.Remove(capture);
     await DbContext.SaveChangesAsync();
-
-    await RefreshMeasurements();
     await LoadMeasurementsAsync();
   }
 
@@ -232,7 +228,6 @@
     await DbContext.SaveChangesAsync(); // then we we write it to our sql server
 
     Input = new(); // clear the form after successful submission
-    await RefreshMeasurements();
     await LoadMeasurementsAsync();
   }
 
@@ -262,7 +257,7 @@
 
   }
 
-  private void RecalculateStatisitcs()
+  private void RecalculateStatistics()
   {
     Statistics["Temperature"] = CalculateStats(
       Measurements.Select(m => m.Temperature)
@@ -276,7 +271,7 @@
       Measurements.Select(m => m.Weight)
     );
 
-    Statistics["Weight"] = CalculateStats(
+    Statistics["Width"] = CalculateStats(
       Measurements.Select(m => m.Weight)
     );
 
@@ -328,6 +323,6 @@
         .Include(measurement => measurement.ProductionLine)
         .ToListAsync();
 
-    RecalculateStatisitcs();
+    RecalculateStatistics();
   }
 }
