@@ -6,19 +6,12 @@
     </div>
 
     <main>
-        <div class="top-row px-4">
+        <div class="top-row px-4 d-flex align-items-center gap-3">
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
 
             <AuthorizeView>
                 <Authorized>
-                    <span class="nav-link">Hello, @context.User.Identity?.Name</span>
-                    <form action="Account/Logout" method="post">
-                        <AntiforgeryToken />
-                        <input type="hidden" name="returnUrl" value="" />
-                        <button type="submit" class="nav-link">
-                            Logout
-                        </button>
-                    </form>
+                    <span class="nav-link">@context.User.Identity?.Name</span>
                 </Authorized>
                 <NotAuthorized>
                     <a href="Account/Login" class="nav-link">Login</a>

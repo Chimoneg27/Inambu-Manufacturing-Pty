@@ -20,5 +20,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
       new ProductionLine { Id = 2, Name = "Production Line 2" },
       new ProductionLine { Id = 3, Name = "Production Line 3" }
     );
+
+    builder.Entity<Measurement>(entity => {
+      entity.Property(m => m.Temperature).HasPrecision(18, 2);
+      entity.Property(m => m.Humidity).HasPrecision(18, 2);
+      entity.Property(m => m.Weight).HasPrecision(18, 2);
+      entity.Property(m => m.Width).HasPrecision(18, 2);
+      entity.Property(m => m.Length).HasPrecision(18, 2);
+      entity.Property(m => m.Depth).HasPrecision(18, 2);
+    });
   }
 }
