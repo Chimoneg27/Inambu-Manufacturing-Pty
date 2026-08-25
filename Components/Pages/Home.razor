@@ -2,7 +2,7 @@
 @using Microsoft.EntityFrameworkCore
 @using Inambu_Manufacturing_Pty.Data
 @using Inambu_Manufacturing_Pty.Models
-@rendermode InteractiveServer 
+@rendermode InteractiveServer
 @using System.Security.Claims;
 @inject ApplicationDbContext DbContext
 @inject AuthenticationStateProvider AuthProvider
@@ -10,6 +10,41 @@
 <PageTitle>Inambu Manufacturing (Pty) Ltd</PageTitle>
 
 <h1 class="mb-6">Quality Control Measurement Capture</h1>
+
+<div>
+  <h2>Measurement Capture Statistics</h2>
+
+  @if (Statistics.Count > 0)
+  {
+    <table class="table table-bordered table-striped mb-4">
+      <thead>
+        <tr>
+          <th>Measurement</th>
+          <th>Highest</th>
+          <th>Lowest</th>
+          <th>Variance</th>
+          <th>Mean</th>
+          <th>Sum</th>
+          <th>Standard Deviation</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var stat in Statistics)
+        {
+          <tr>
+            <td>@stat.Key</td>
+            <td>@stat.Value.Highest</td>
+            <td>@stat.Value.Lowest</td>
+            <td>@stat.Value.Variance</td>
+            <td>@stat.Value.Mean</td>
+            <td>@stat.Value.Sum</td>
+            <td>@stat.Value.StandardDeviation</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
 
 <EditForm Model="Input" OnValidSubmit="AddMeasurements" FormName="measurementForm" class="row g-3">
   <DataAnnotationsValidator />
@@ -96,7 +131,9 @@
           @if (measurement.Passed == false)
           {
             <i class="bi bi-x-lg" width="32" height="32" fill="red"></i>
-          } else {
+          }
+          else
+          {
             <i class="bi bi-check2" width="32" height="32" fill="blue"></i>
           }
         </td>
@@ -115,27 +152,34 @@
 @code {
   private List<Measurement> Measurements = new(); // the list of measurements
 
-  private MeasurementInput Input { get; set; } = new(); // so this holds the values that that the user enters into the form
+  private MeasurementInput Input { get; set; } = new(); // so this holds the values that that the user enters into the
+
   private List<ProductionLine> ProductionLines = new(); // holds the productions lines we will select
+                                                        // holds the stats for each measurement
+  private Dictionary<string, MeasurementStatistics> Statistics = new();
   private string? CurrentUserId;
 
   protected override async Task OnInitializedAsync()
   {
-    Measurements = await DbContext.Measurements.Include(m => m.ApplicationUser).ToListAsync(); // this fetches every measurement entry we have
+    Measurements = await DbContext.Measurements.Include(m => m.ApplicationUser).ToListAsync(); // this fetches every
+
     ProductionLines = await DbContext.ProductionLines.ToListAsync();
 
     var authState = await AuthProvider.GetAuthenticationStateAsync();
 
-        CurrentUserId = authState.User
-            .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    CurrentUserId = authState.User
+        .FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
     if (ProductionLines.Any() && Input.ProductionLineId == 0)
     {
       Input.ProductionLineId = ProductionLines.First().Id;
     }
+
+    await LoadMeasurementsAsync();
   }
 
-  private async Task DeleteCapture(int id) {
+  private async Task DeleteCapture(int id)
+  {
     var capture = await DbContext.Measurements.FirstOrDefaultAsync(m => m.Id == id);
 
     if (capture is null)
@@ -154,7 +198,8 @@
     DbContext.Measurements.Remove(capture);
     await DbContext.SaveChangesAsync();
 
-    Measurements = await DbContext.Measurements.Include(m => m.ApplicationUser).ToListAsync();
+    await RefreshMeasurements();
+    await LoadMeasurementsAsync();
   }
 
   private async Task AddMeasurements()
@@ -185,9 +230,63 @@
 
     DbContext.Measurements.Add(measurement); // stage the new measurement entry in memory
     await DbContext.SaveChangesAsync(); // then we we write it to our sql server
-    
+
     Input = new(); // clear the form after successful submission
-    Measurements = await DbContext.Measurements.Include(m => m.ApplicationUser).Include(m => m.ProductionLine).ToListAsync();
+    await RefreshMeasurements();
+    await LoadMeasurementsAsync();
+  }
+
+  private MeasurementStatistics CalculateStats(IEnumerable<decimal> values)
+  {
+    var numbers = values.ToList();
+
+    if (numbers.Count == 0)
+    {
+      return new MeasurementStatistics();
+    }
+
+    var sum = numbers.Sum();
+    var mean = sum / numbers.Count();
+    var variance = numbers.Select(number => (number - mean) * (number - mean)).Sum() / numbers.Count;
+    var standardDeviation = (decimal)Math.Sqrt((double)variance);
+
+    return new MeasurementStatistics
+    {
+      Highest = numbers.Max(),
+      Lowest = numbers.Min(),
+      Variance = variance,
+      Mean = mean,
+      Sum = sum,
+      StandardDeviation = standardDeviation
+    };
+
+  }
+
+  private void RecalculateStatisitcs()
+  {
+    Statistics["Temperature"] = CalculateStats(
+      Measurements.Select(m => m.Temperature)
+    );
+
+    Statistics["Humidity"] = CalculateStats(
+      Measurements.Select(m => m.Humidity)
+    );
+
+    Statistics["Weight"] = CalculateStats(
+      Measurements.Select(m => m.Weight)
+    );
+
+    Statistics["Weight"] = CalculateStats(
+      Measurements.Select(m => m.Weight)
+    );
+
+    Statistics["Length"] = CalculateStats(
+      Measurements.Select(m => m.Length)
+    );
+
+    Statistics["Depth"] = CalculateStats(
+      Measurements.Select(m => m.Depth)
+    );
   }
 
   public class MeasurementInput
@@ -201,5 +300,34 @@
     public bool Passed { get; set; }
 
     public int ProductionLineId { get; set; }
+  }
+
+  public class MeasurementStatistics
+  {
+    public decimal Highest { get; set; }
+    public decimal Lowest { get; set; }
+    public decimal Variance { get; set; }
+    public decimal Mean { get; set; }
+    public decimal Sum { get; set; }
+    public decimal StandardDeviation { get; set; }
+  }
+
+  private async Task RefreshMeasurements()
+  {
+    Measurements = await DbContext.Measurements
+        .Include(m => m.ApplicationUser)
+        .Include(m => m.ProductionLine)
+        .ToListAsync();
+  }
+
+  // loads measurements from the database and recalculates our stats
+  private async Task LoadMeasurementsAsync()
+  {
+    Measurements = await DbContext.Measurements
+        .Include(measurement => measurement.ApplicationUser)
+        .Include(measurement => measurement.ProductionLine)
+        .ToListAsync();
+
+    RecalculateStatisitcs();
   }
 }
