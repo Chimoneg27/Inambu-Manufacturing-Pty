@@ -4,6 +4,7 @@ using Inambu_Manufacturing_Pty.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InambuManufacturingPty.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260826194213_AddCapitalExRequestModel")]
+    partial class AddCapitalExRequestModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -92,42 +95,6 @@ namespace InambuManufacturingPty.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
-                });
-
-            modelBuilder.Entity("Inambu_Manufacturing_Pty.Models.ApprovalHistoryModel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("Action")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ActionByUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("ApprovedOrRejectedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CapitalExId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("CapitalExRequestId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Comment")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ActionByUserId");
-
-                    b.HasIndex("CapitalExRequestId");
-
-                    b.ToTable("ApprovalHistoryModel");
                 });
 
             modelBuilder.Entity("Inambu_Manufacturing_Pty.Models.CapitalExRequestModel", b =>
@@ -386,23 +353,6 @@ namespace InambuManufacturingPty.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("Inambu_Manufacturing_Pty.Models.ApprovalHistoryModel", b =>
-                {
-                    b.HasOne("Inambu_Manufacturing_Pty.Data.ApplicationUser", "ActionByUser")
-                        .WithMany()
-                        .HasForeignKey("ActionByUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Inambu_Manufacturing_Pty.Models.CapitalExRequestModel", "CapitalExRequest")
-                        .WithMany("History")
-                        .HasForeignKey("CapitalExRequestId");
-
-                    b.Navigation("ActionByUser");
-
-                    b.Navigation("CapitalExRequest");
-                });
-
             modelBuilder.Entity("Inambu_Manufacturing_Pty.Models.CapitalExRequestModel", b =>
                 {
                     b.HasOne("Inambu_Manufacturing_Pty.Data.ApplicationUser", "RequestedByUser")
@@ -482,11 +432,6 @@ namespace InambuManufacturingPty.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("Inambu_Manufacturing_Pty.Models.CapitalExRequestModel", b =>
-                {
-                    b.Navigation("History");
                 });
 #pragma warning restore 612, 618
         }

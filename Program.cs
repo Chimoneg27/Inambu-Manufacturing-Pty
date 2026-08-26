@@ -6,6 +6,7 @@ using Inambu_Manufacturing_Pty.Components;
 using Inambu_Manufacturing_Pty.Components.Account;
 using Inambu_Manufacturing_Pty.Data;
 using System.Security.Claims;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,6 +63,34 @@ app.UseHttpsRedirection();
 //     await signInManager.SignOutAsync(); // actual logout it clears the authentication cookie server-side.
 //     return TypedResults.LocalRedirect($"~/{returnUrl}");
 // });
+
+using (var scope = app.Services.CreateScope())
+{
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    // Department Manager (Bob Lockwood) → Finance Director (Alice Liddle) → CEO (Jeff Sidebottom) 
+    var newStaff = new[]
+    {
+        new { Email = "boblockwood1@gmail.com", Name = "Bob Lockwood", Level = StaffLevel.Manager },
+        new { Email = "aliceliddle@gmail.com", Name = "Alice Liddle", Level = StaffLevel.FinanceDirector },
+        new { Email = "jeffsidebottom@gmail.com", Name = "Jeff Sidebottom", Level = StaffLevel.CEO }
+    };
+
+    foreach (var staff in newStaff)
+    {
+        if (await userManager.FindByEmailAsync(staff.Email) == null)
+        {
+            var user = new ApplicationUser
+            {
+                UserName = staff.Email,
+                Email = staff.Email,
+                EmailConfirmed = true,
+                DisplayName = staff.Name,
+                StaffLevel = staff.Level
+            };
+            await userManager.CreateAsync(user, "SomeStrongPasswor1#");
+        }
+    }
+}
 
 app.UseAntiforgery();
 
