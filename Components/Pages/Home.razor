@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using Inambu_Manufacturing_Pty.Components.Measurements
 @using Microsoft.EntityFrameworkCore
 @using Inambu_Manufacturing_Pty.Data
 @using Inambu_Manufacturing_Pty.Models
@@ -11,149 +12,32 @@
 
 <h1 class="mb-6">Quality Control Measurement Capture</h1>
 
-<div>
-  <h2>Measurement Capture Statistics</h2>
+<MeasurementStatisticsTable Statistics="Statistics" />
 
-  @if (Statistics.Count > 0)
-  {
-    <table class="table table-bordered table-striped mb-4">
-      <thead>
-        <tr>
-          <th>Measurement</th>
-          <th>Highest</th>
-          <th>Lowest</th>
-          <th>Variance</th>
-          <th>Mean</th>
-          <th>Sum</th>
-          <th>Standard Deviation</th>
-        </tr>
-      </thead>
-      <tbody>
-        @foreach (var stat in Statistics)
-        {
-          <tr>
-            <td>@stat.Key</td>
-            <td>@stat.Value.Highest</td>
-            <td>@stat.Value.Lowest</td>
-            <td>@stat.Value.Variance</td>
-            <td>@stat.Value.Mean</td>
-            <td>@stat.Value.Sum</td>
-            <td>@stat.Value.StandardDeviation</td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  }
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">New Measurement</h5>
+  </div>
+
+  <div class="card-body">
+    <EditForm Model="Input" OnSubmit="AddMeasurements" FormName="addCaptrue">
+      <DataAnnotationsValidator />
+      <MeasurementForm Model="Input" ProductionLines="ProductionLines" />
+
+      <div class="col-12 mt-3">
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </div>
+    </EditForm>
+  </div>
 </div>
 
-<EditForm Model="Input" OnValidSubmit="AddMeasurements" FormName="measurementForm" class="row g-3">
-  <DataAnnotationsValidator />
+<h2>Captured Measurements</h2>
 
-  <div class="col-md-6">
-    <label for="productionLine" class="form-label">Production Line</label>
-    <select @bind="Input.ProductionLineId" class="form-select">
-      @foreach (var productLine in ProductionLines)
-      {
-        <option value="@productLine.Id">@productLine.Name</option>
-      }
-    </select>
-  </div>
-
-  <div class="col-md-6">
-    <label for="temperature" class="form-label">Temperature</label>
-    <input type="number" class="form-control" step="0.01" @bind="Input.Temperature" @bind:event="oninput">
-  </div>
-
-  <div class="col-md-6">
-    <label for="humidity" class="form-label">Humidity</label>
-    <input type="number" class="form-control" step="0.01" @bind="Input.Humidity" @bind:event="oninput">
-  </div>
-
-  <div class="col-md-6">
-    <label for="weight" class="form-label">Weight</label>
-    <input type="number" class="form-control" step="0.01" @bind="Input.Weight" @bind:event="oninput">
-  </div>
-
-  <div class="col-md-6">
-    <label for="width" class="form-label">Width</label>
-    <input type="number" class="form-control" step="0.01" @bind="Input.Width" @bind:event="oninput">
-  </div>
-
-  <div class="col-md-6">
-    <label for="length" class="form-label">Length</label>
-    <input type="number" class="form-control" step="0.01" @bind="Input.Length" @bind:event="oninput">
-  </div>
-
-  <div class="col-md-6">
-    <label for="depth" class="form-label">Depth</label>
-    <input type="number" class="form-control" step="0.01" @bind="Input.Depth" @bind:event="oninput">
-  </div>
-
-  <div class="col-md-6">
-    <label for="passed" class="form-label">Passed</label>
-    <input type="checkbox" class="form-check-input" style="transform: scale(1.5);" @bind="Input.Passed">
-  </div>
-
-  <div class="col-12">
-    <button type="submit" class="btn btn-primary">Submit</button>
-  </div>
-</EditForm>
-
-<table class="table">
-  <thead>
-    <tr>
-      <th>User</th>
-      <th>Production Line</th>
-      <th>Temperature</th>
-      <th>Humidity</th>
-      <th>Weight</th>
-      <th>Width</th>
-      <th>Length</th>
-      <th>Depth</th>
-      <th>Date Added</th>
-      <th>Passed</th>
-    </tr>
-  </thead>
-  <tbody>
-    @foreach (var measurement in Measurements)
-    {
-      <tr>
-        <td>@measurement.ApplicationUser.Email</td>
-        <td>@measurement.ProductionLine.Name</td>
-        <td>@measurement.Temperature</td>
-        <td>@measurement.Humidity</td>
-        <td>@measurement.Weight</td>
-        <td>@measurement.Width</td>
-        <td>@measurement.Length</td>
-        <td>@measurement.Depth</td>
-        <td>@measurement.CapturedAtUtc</td>
-        <td>
-          @if (measurement.Passed == false)
-          {
-            <i class="bi bi-x-lg" width="32" height="32" fill="red"></i>
-          }
-          else
-          {
-            <i class="bi bi-check2" width="32" height="32" fill="blue"></i>
-          }
-        </td>
-        <td>
-          @if (measurement.ApplicationUserId == CurrentUserId)
-          {
-            <a href="@($"/measurements/edit/{measurement.Id}")" class="btn btn-sm btn-primary">Edit</a>
-            <button class="btn btn-sm btn-danger" @onclick="() => DeleteCapture(measurement.Id)">Delete</button>
-          }
-        </td>
-      </tr>
-    }
-  </tbody>
-</table>
+<MeasurementsTable Measurements="Measurements" CurrentUserId="@CurrentUserId" OnDelete="DeleteMeasurement" />
 
 @code {
-  private List<Measurement> Measurements = new(); // the list of measurements
-
-  private MeasurementInput Input { get; set; } = new(); // so this holds the values that that the user enters into the
-
+  private List<MeasurementInputModel> Measurements = new(); // the list of measurements
+  private MeasurementInputModel Input { get; set; } = new(); // so this holds the values that that the user enters into
   private List<ProductionLine> ProductionLines = new(); // holds the productions lines we will select
                                                         // holds the stats for each measurement
   private Dictionary<string, MeasurementStatistics> Statistics = new();
@@ -161,26 +45,35 @@
 
   protected override async Task OnInitializedAsync()
   {
-    Measurements = await DbContext.Measurements.Include(m => m.ApplicationUser).ToListAsync(); // this fetches every
+    await LoadDataAsync();
+  }
 
-    ProductionLines = await DbContext.ProductionLines.ToListAsync();
-
+  private async Task LoadDataAsync()
+  {
     var authState = await AuthProvider.GetAuthenticationStateAsync();
-
     CurrentUserId = authState.User
         .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    ProductionLines = await DbContext.ProductionLines.ToListAsync();
+    Measurements = await DbContext.Measurements
+            .Include(m => m.ApplicationUser)
+            .Include(m => m.ProductionLine)
+            .OrderByDescending(m => m.CapturedAtUtc) // we will now see the latest entries in the table
+            .ToListAsync();
 
     if (ProductionLines.Any() && Input.ProductionLineId == 0)
     {
       Input.ProductionLineId = ProductionLines.First().Id;
     }
 
-    await LoadMeasurementsAsync();
+    RecalculateStatistics();
   }
 
-  private async Task DeleteCapture(int id)
+  private async Task DeleteMeasurement(int id)
   {
-    var capture = await DbContext.Measurements.FirstOrDefaultAsync(m => m.Id == id);
+    var capture = await DbContext.Measurements
+      .Include(measurement => measurement.ApplicationUser)
+      .FirstOrDefaultAsync(measurement => measurement.Id == id);
 
     if (capture is null)
     {
@@ -188,7 +81,7 @@
     }
 
     var authState = await AuthProvider.GetAuthenticationStateAsync();
-    var userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var userId = await ResolveCurrentUserIdAsync(authState.User);
 
     if (capture.ApplicationUserId != userId)
     {
@@ -197,22 +90,20 @@
 
     DbContext.Measurements.Remove(capture);
     await DbContext.SaveChangesAsync();
-
-    await RefreshMeasurements();
-    await LoadMeasurementsAsync();
+    await LoadDataAsync();
   }
 
   private async Task AddMeasurements()
   {
     var authState = await AuthProvider.GetAuthenticationStateAsync();
-    var userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier); // grabs the logged in user's id
+    var userId = await ResolveCurrentUserIdAsync(authState.User); // grabs the logged in user's id
 
     if (string.IsNullOrWhiteSpace(userId))
     {
       throw new InvalidOperationException("Authenticated user ID could not be found.");
     }
 
-    var measurement = new Measurement // the shape of the measurement we will make
+    var measurement = new MeasurementInputModel // the shape of the measurement we will make
     {
       Temperature = Input.Temperature,
       Humidity = Input.Humidity,
@@ -232,8 +123,12 @@
     await DbContext.SaveChangesAsync(); // then we we write it to our sql server
 
     Input = new(); // clear the form after successful submission
-    await RefreshMeasurements();
-    await LoadMeasurementsAsync();
+    await LoadDataAsync();
+  }
+
+  private async Task<string?> ResolveCurrentUserIdAsync(ClaimsPrincipal user)
+  {
+    return user.FindFirstValue(ClaimTypes.NameIdentifier);
   }
 
   private MeasurementStatistics CalculateStats(IEnumerable<decimal> values)
@@ -247,7 +142,7 @@
 
     var sum = numbers.Sum();
     var mean = sum / numbers.Count();
-    var variance = numbers.Select(number => (number - mean) * (number - mean)).Sum() / numbers.Count;
+    var variance = numbers.Sum(n => (n - mean) * (n - mean)) / numbers.Count;
     var standardDeviation = (decimal)Math.Sqrt((double)variance);
 
     return new MeasurementStatistics
@@ -262,7 +157,7 @@
 
   }
 
-  private void RecalculateStatisitcs()
+  private void RecalculateStatistics()
   {
     Statistics["Temperature"] = CalculateStats(
       Measurements.Select(m => m.Temperature)
@@ -276,8 +171,8 @@
       Measurements.Select(m => m.Weight)
     );
 
-    Statistics["Weight"] = CalculateStats(
-      Measurements.Select(m => m.Weight)
+    Statistics["Width"] = CalculateStats(
+      Measurements.Select(m => m.Width)
     );
 
     Statistics["Length"] = CalculateStats(
@@ -287,47 +182,5 @@
     Statistics["Depth"] = CalculateStats(
       Measurements.Select(m => m.Depth)
     );
-  }
-
-  public class MeasurementInput
-  {
-    public decimal Temperature { get; set; }
-    public decimal Humidity { get; set; }
-    public decimal Weight { get; set; }
-    public decimal Width { get; set; }
-    public decimal Length { get; set; }
-    public decimal Depth { get; set; }
-    public bool Passed { get; set; }
-
-    public int ProductionLineId { get; set; }
-  }
-
-  public class MeasurementStatistics
-  {
-    public decimal Highest { get; set; }
-    public decimal Lowest { get; set; }
-    public decimal Variance { get; set; }
-    public decimal Mean { get; set; }
-    public decimal Sum { get; set; }
-    public decimal StandardDeviation { get; set; }
-  }
-
-  private async Task RefreshMeasurements()
-  {
-    Measurements = await DbContext.Measurements
-        .Include(m => m.ApplicationUser)
-        .Include(m => m.ProductionLine)
-        .ToListAsync();
-  }
-
-  // loads measurements from the database and recalculates our stats
-  private async Task LoadMeasurementsAsync()
-  {
-    Measurements = await DbContext.Measurements
-        .Include(measurement => measurement.ApplicationUser)
-        .Include(measurement => measurement.ProductionLine)
-        .ToListAsync();
-
-    RecalculateStatisitcs();
   }
 }

@@ -2,7 +2,7 @@ using Inambu_Manufacturing_Pty.Data;
 
 namespace Inambu_Manufacturing_Pty.Models;
 
-public class Measurement
+public class MeasurementInputModel
 {
   public int Id { get; set; }
   public decimal Temperature { get; set; }

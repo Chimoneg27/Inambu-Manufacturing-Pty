@@ -1,0 +1,47 @@
+@using Inambu_Manufacturing_Pty.Models
+
+<div class="mb-4">
+  <h2>Measurement Capture Statistics</h2>
+
+  @if (Statistics.Count == 0)
+  {
+    <p class="text-muted">No measurements available to calculate statistics.</p>
+  }
+  else
+  {
+    <div clasas="table-responsive">
+      <table class="table table-bordered table-striped">
+        <thead>
+          <tr>
+            <th>Measurement</th>
+            <th>Highest</th>
+            <th>Lowest</th>
+            <th>Variance</th>
+            <th>Mean</th>
+            <th>Sum</th>
+            <th>Standard Deviation</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var stat in Statistics)
+          {
+            <tr>
+              <td>@stat.Key</td>
+              <td>@stat.Value.Highest.ToString("F2")</td>
+              <td>@stat.Value.Lowest.ToString("F2")</td>
+              <td>@stat.Value.Variance.ToString("F2")</td>
+              <td>@stat.Value.Mean.ToString("F2")</td>
+              <td>@stat.Value.Sum.ToString("F2")</td>
+              <td>@stat.Value.StandardDeviation.ToString("F2")</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+@code {
+  [Parameter, EditorRequired]
+  public Dictionary<string, MeasurementStatistics> Statistics { get; set; } = null!;
+}
