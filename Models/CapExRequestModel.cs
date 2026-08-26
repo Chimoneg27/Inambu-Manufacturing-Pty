@@ -15,6 +15,7 @@ public class CapitalExRequestModel
   public ApplicationUser? RequestedByUser { get; set; }
 
   public CapExStatus Status { get; set; } = CapExStatus.Pending;
-  public ApprovalStage CurrentStage { get; set; }
+  public ApprovalStage CurrentStage { get; set; } = ApprovalStage.DepartmentManager;
   public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+  public ICollection<ApprovalHistoryModel> History { get; set; } = new List<ApprovalHistoryModel>();
 }
