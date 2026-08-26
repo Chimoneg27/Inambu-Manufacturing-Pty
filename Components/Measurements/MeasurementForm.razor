@@ -1,0 +1,64 @@
+@using Inambu_Manufacturing_Pty.Models
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <label for="productionLine" class="form-label">Production Line</label>
+    <InputSelect @bind-Value="Model.ProductionLineId" class="form-select" id="productionLine">
+      @foreach (var line in ProductionLines)
+      {
+        <option value="@line.Id">@line.Name</option>
+      }
+    </InputSelect>
+    <ValidationMessage For="@(() => Model.ProductionLineId)" />
+  </div>
+
+  <div class="col-md-6">
+    <label for="temperature" class="form-label">Temperature</label>
+    <InputNumber @bind-Value="Model.Temperature" class="form-control" id="temperature" step="0.01" />
+    <ValidationMessage For="@(() => Model.Temperature)" />
+  </div>
+
+  <div class="col-md-6">
+    <label for="humidity" class="form-label">Humidity</label>
+    <InputNumber @bind-Value="Model.Humidity" class="form-control" id="humidity" step="0.01" />
+    <ValidationMessage For="@(() => Model.Humidity)" />
+  </div>
+
+  <div class="col-md-6">
+    <label for="weight" class="form-label">Weight</label>
+    <InputNumber @bind-Value="Model.Weight" class="form-control" id="weight" step="0.01" />
+    <ValidationMessage For="@(() => Model.Weight)" />
+  </div>
+
+  <div class="col-md-6">
+    <label for="width" class="form-label">Width</label>
+    <InputNumber @bind-Value="Model.Width" class="form-control" id="width" step="0.01" />
+    <ValidationMessage For="@(() => Model.Width)" />
+  </div>
+
+  <div class="col-md-6">
+    <label for="length" class="form-label">Length</label>
+    <InputNumber @bind-Value="Model.Length" class="form-control" id="length" step="0.01" />
+    <ValidationMessage For="@(() => Model.Length)" />
+  </div>
+
+  <div class="col-md-6">
+    <label for="depth" class="form-label">Depth</label>
+    <InputNumber @bind-Value="Model.Depth" class="form-control" id="depth" step="0.01" />
+    <ValidationMessage For="@(() => Model.Depth)" />
+  </div>
+
+  <div class="col-md-6 d-flex align-items-center gap-3">
+    <label for="passed" class="form-label mb-0">Passed</label>
+    <InputCheckbox @bind-Value="Model.Passed" class="form-check-input" id="passed" style="transform: scale(1.5);" />
+  </div>
+</div>
+
+@code {
+  [Parameter, EditorRequired]
+  public MeasurementInputModel Model { set; get; } = null!;
+
+  [Parameter, EditorRequired]
+  public List<ProductionLine> ProductionLines { get; set; } = null!;
+}
+
