@@ -6,6 +6,7 @@
 
 main {
     flex: 1;
+    min-width: 0;
 }
 
 .sidebar {
@@ -74,6 +75,11 @@ main {
         padding-left: 2rem !important;
         padding-right: 1.5rem !important;
     }
+}
+
+article {
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 #blazor-error-ui {

@@ -8,7 +8,7 @@ namespace Inambu_Manufacturing_Pty.Data;
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
   public DbSet<ProductionLine> ProductionLines { get; set; } // registering the productionLine model
-  public DbSet<Measurement> Measurements { get; set; }
+  public DbSet<MeasurementInputModel> Measurements { get; set; }
 
   protected override void OnModelCreating(ModelBuilder builder)
   {
@@ -21,7 +21,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
       new ProductionLine { Id = 3, Name = "Production Line 3" }
     );
 
-    builder.Entity<Measurement>(entity => {
+    builder.Entity<MeasurementInputModel>(entity => {
       entity.Property(m => m.Temperature).HasPrecision(18, 2);
       entity.Property(m => m.Humidity).HasPrecision(18, 2);
       entity.Property(m => m.Weight).HasPrecision(18, 2);
