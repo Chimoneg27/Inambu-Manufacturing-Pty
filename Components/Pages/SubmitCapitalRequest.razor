@@ -7,52 +7,18 @@
 @using Microsoft.EntityFrameworkCore
 @inject AuthenticationStateProvider AuthProvider
 @inject ApplicationDbContext db
+@using Inambu_Manufacturing_Pty.Components.CapitalExRequests
 
 <PageTitle>Submit Capital Request</PageTitle>
 
 <h1 class="mb-4">Submit Capital Request</h1>
 
 <div class="row row-cols-1 row-cols-md-2 row-cols-xl-5 g-3 mb-4">
-  <div class="col">
-    <div class="card h-100 border-0 shadow-sm bg-warning-subtle text-warning-emphasis">
-      <div class="card-body text-center">
-        <div class="text-uppercase small fw-semibold text-muted">Pending</div>
-        <div class="fs-3 fw-bold mt-2">@pendingCount</div>
-      </div>
-    </div>
-  </div>
-  <div class="col">
-    <div class="card h-100 border-0 shadow-sm bg-success-subtle text-success-emphasis">
-      <div class="card-body text-center">
-        <div class="text-uppercase small fw-semibold text-muted">Approved</div>
-        <div class="fs-3 fw-bold mt-2">@approvedCount</div>
-      </div>
-    </div>
-  </div>
-  <div class="col">
-    <div class="card h-100 border-0 shadow-sm bg-danger-subtle text-danger-emphasis">
-      <div class="card-body text-center">
-        <div class="text-uppercase small fw-semibold text-muted">Rejected</div>
-        <div class="fs-3 fw-bold mt-2">@rejectedCount</div>
-      </div>
-    </div>
-  </div>
-  <div class="col">
-    <div class="card h-100 border-0 shadow-sm bg-primary-subtle text-primary-emphasis">
-      <div class="card-body text-center">
-        <div class="text-uppercase small fw-semibold text-muted">Pending Value</div>
-        <div class="fs-3 fw-bold mt-2">@totalPendingAmount.ToString("C")</div>
-      </div>
-    </div>
-  </div>
-  <div class="col">
-    <div class="card h-100 border-0 shadow-sm bg-success-subtle text-success-emphasis">
-      <div class="card-body text-center">
-        <div class="text-uppercase small fw-semibold text-muted">Approved Value</div>
-        <div class="fs-3 fw-bold mt-2">@totalApprovedAmount.ToString("C")</div>
-      </div>
-    </div>
-  </div>
+  <MetricCards Label="Pending" Value='@pendingCount.ToString()' Variant="warning" />
+  <MetricCards Label="Approved" Value='@approvedCount.ToString()' Variant="warning" />
+  <MetricCards Label="Rejected" Value='@rejectedCount.ToString()' Variant="warning" />
+  <MetricCards Label="Pending Value" Value='@totalPendingAmount.ToString()' Variant="warning" />
+  <MetricCards Label="Approved Value" Value='@totalApprovedAmount.ToString()' Variant="warning" />
 </div>
 
 <div class="card mb-4">
@@ -66,17 +32,7 @@
       <DataAnnotationsValidator />
       <ValidationSummary class="alert alert-danger" />
 
-      <div class="col-12 col-md-6">
-        <label for="amountRequested" class="form-label">Amount</label>
-        <InputNumber @bind-Value="input.AmountRequested" class="form-control" id="amountRequested" />
-        <ValidationMessage For="() => input.AmountRequested" />
-      </div>
-
-      <div class="col-12">
-        <label for="comment" class="form-label">Description</label>
-        <InputTextArea @bind-Value="input.Comment" class="form-control" id="comment" rows="4" />
-        <ValidationMessage For="() => input.Comment" />
-      </div>
+      <CapitalExRequestForm Model="input" />
 
       <div class="col-12">
         <button type="submit" class="btn btn-primary">Submit Request</button>
@@ -91,99 +47,11 @@
   </div>
 
   @* the requests table *@
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Amount</th>
-        <th>Description</th>
-        <th>Requested By</th>
-        <th>Status</th>
-        <th>Current Stage</th>
-      </tr>
-    </thead>
-    <tbody>
-      @foreach (var req in requests)
-      {
-        <tr @onclick="() => ViewRequest(req.Id)">
-          <td>@req.Amount.ToString("C")</td>
-          <td>@req.Description</td>
-          <td>@req.RequestedByUser?.UserName</td>
-          <td>@req.Status</td>
-          <td>@req.CurrentStage</td>
-        </tr>
-      }
-    </tbody>
-  </table>
+  <CapitalExRequestTable requests="requests" ViewRequest="ViewRequest" />
 </div>
 
 @* the popup modal *@
-@if (selectedRequest != null)
-{
-  <div class="modal d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content"> @* <-- this wrapper was missing *@
-
-        <div class="modal-header">
-          <h5 class="modal-title">Request Details</h5>
-          <button type="button" class="btn-close" @onclick="CloseModal"></button>
-        </div>
-
-        <div class="modal-body">
-          <p><strong>Amount:</strong> @selectedRequest.Amount.ToString("C")</p>
-          <p><strong>Description:</strong> @selectedRequest.Description</p>
-          <p><strong>Requested By:</strong> @selectedRequest.RequestedByUser?.UserName</p>
-          <p><strong>Status:</strong> @selectedRequest.Status</p>
-          <p><strong>Current Stage:</strong> @selectedRequest.CurrentStage</p>
-
-          <hr />
-          <h6>Approval History</h6>
-          @if (history.Count == 0)
-          {
-            <p class="text-muted">No actions yet.</p>
-          }
-          else
-          {
-            <table class="table table-sm">
-              <thead>
-                <tr>
-                  <th>Action</th>
-                  <th>By</th>
-                  <th>Date</th>
-                  <th>Comment</th>
-                </tr>
-              </thead>
-              <tbody>
-                @foreach (var h in history)
-                {
-                  <tr>
-                    <td>@h.Action</td>
-                    <td>@h.ActionByUser?.DisplayName</td>
-                    <td>@h.ApprovedOrRejectedAt.ToString("g")</td>
-                    <td>@h.Comment</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          }
-
-          @if (userAction)
-          {
-            <hr />
-            <div class="d-flex gap-2 mt-3">
-              <button class="btn btn-success" @onclick="() => Approve(selectedRequest.Id)">Approve</button>
-              <button class="btn btn-danger" @onclick="() => Reject(selectedRequest.Id)">Reject</button>
-            </div>
-          }
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @onclick="CloseModal">Close</button>
-        </div>
-
-      </div> @* closes modal-content *@
-    </div> @* closes modal-dialog *@
-  </div> @* closes modal *@
-}
+<CapitalRequestDetailModal Request="selectedRequest" History="history" ShowActions="userAction" OnApprove="Approve" OnReject="Reject" OnClose="CloseModal" />
 
 @code
 {
