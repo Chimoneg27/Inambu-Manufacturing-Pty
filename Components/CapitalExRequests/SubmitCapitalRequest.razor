@@ -12,6 +12,49 @@
 
 <h1 class="mb-4">Submit Capital Request</h1>
 
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-5 g-3 mb-4">
+  <div class="col">
+    <div class="card h-100 border-0 shadow-sm bg-warning-subtle text-warning-emphasis">
+      <div class="card-body text-center">
+        <div class="text-uppercase small fw-semibold text-muted">Pending</div>
+        <div class="fs-3 fw-bold mt-2">@pendingCount</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card h-100 border-0 shadow-sm bg-success-subtle text-success-emphasis">
+      <div class="card-body text-center">
+        <div class="text-uppercase small fw-semibold text-muted">Approved</div>
+        <div class="fs-3 fw-bold mt-2">@approvedCount</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card h-100 border-0 shadow-sm bg-danger-subtle text-danger-emphasis">
+      <div class="card-body text-center">
+        <div class="text-uppercase small fw-semibold text-muted">Rejected</div>
+        <div class="fs-3 fw-bold mt-2">@rejectedCount</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card h-100 border-0 shadow-sm bg-primary-subtle text-primary-emphasis">
+      <div class="card-body text-center">
+        <div class="text-uppercase small fw-semibold text-muted">Pending Value</div>
+        <div class="fs-3 fw-bold mt-2">@totalPendingAmount.ToString("C")</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card h-100 border-0 shadow-sm bg-success-subtle text-success-emphasis">
+      <div class="card-body text-center">
+        <div class="text-uppercase small fw-semibold text-muted">Approved Value</div>
+        <div class="fs-3 fw-bold mt-2">@totalApprovedAmount.ToString("C")</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="card mb-4">
   <div class="card-header">
     <h5 class="mb-0">Request Details</h5>
@@ -150,6 +193,21 @@
   private List<ApprovalHistoryModel> history = new();
   private bool userAction;
   private string? currentUserId;
+  private int pendingCount;
+  private int approvedCount;
+  private int rejectedCount;
+  private decimal totalPendingAmount;
+  private decimal totalApprovedAmount;
+
+  private void CalculateMetrics()
+  {
+    pendingCount = requests.Count(r => r.Status == CapExStatus.Pending);
+    approvedCount = requests.Count(r => r.Status == CapExStatus.Approved);
+    rejectedCount = requests.Count(r => r.Status == CapExStatus.Rejected);
+
+    totalApprovedAmount = requests.Where(r => r.Status == CapExStatus.Approved).Sum(r => r.Amount);
+    totalPendingAmount = requests.Where(r => r.Status == CapExStatus.Pending).Sum(r => r.Amount);
+  }
 
   private async Task ViewRequest(int requestId)
   {
@@ -254,6 +312,7 @@ currentUser.StaffLevel.ToString() == selectedRequest.CurrentStage.ToString(); //
                 .Include(req => req.RequestedByUser)
                 .OrderByDescending(req => req.CreatedAt)
                 .ToListAsync();
+    CalculateMetrics();
   }
 
   protected override async Task OnInitializedAsync()
