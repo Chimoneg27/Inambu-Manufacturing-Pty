@@ -70,7 +70,7 @@ using (var scope = app.Services.CreateScope())
     // Department Manager (Bob Lockwood) → Finance Director (Alice Liddle) → CEO (Jeff Sidebottom) 
     var newStaff = new[]
     {
-        new { Email = "boblockwood1@gmail.com", Name = "Bob Lockwood", Level = StaffLevel.Manager },
+        new { Email = "boblockwood1@gmail.com", Name = "Bob Lockwood", Level = StaffLevel.DepartmentManager },
         new { Email = "aliceliddle@gmail.com", Name = "Alice Liddle", Level = StaffLevel.FinanceDirector },
         new { Email = "jeffsidebottom@gmail.com", Name = "Jeff Sidebottom", Level = StaffLevel.CEO }
     };

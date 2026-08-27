@@ -1,0 +1,328 @@
+@page "/capital-requests"
+
+@using System.Security.Claims
+@rendermode InteractiveServer
+@using Inambu_Manufacturing_Pty.Data
+@using Inambu_Manufacturing_Pty.Models
+@using Microsoft.EntityFrameworkCore
+@inject AuthenticationStateProvider AuthProvider
+@inject ApplicationDbContext db
+
+<PageTitle>Submit Capital Request</PageTitle>
+
+<h1 class="mb-4">Submit Capital Request</h1>
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-5 g-3 mb-4">
+  <div class="col">
+    <div class="card h-100 border-0 shadow-sm bg-warning-subtle text-warning-emphasis">
+      <div class="card-body text-center">
+        <div class="text-uppercase small fw-semibold text-muted">Pending</div>
+        <div class="fs-3 fw-bold mt-2">@pendingCount</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card h-100 border-0 shadow-sm bg-success-subtle text-success-emphasis">
+      <div class="card-body text-center">
+        <div class="text-uppercase small fw-semibold text-muted">Approved</div>
+        <div class="fs-3 fw-bold mt-2">@approvedCount</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card h-100 border-0 shadow-sm bg-danger-subtle text-danger-emphasis">
+      <div class="card-body text-center">
+        <div class="text-uppercase small fw-semibold text-muted">Rejected</div>
+        <div class="fs-3 fw-bold mt-2">@rejectedCount</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card h-100 border-0 shadow-sm bg-primary-subtle text-primary-emphasis">
+      <div class="card-body text-center">
+        <div class="text-uppercase small fw-semibold text-muted">Pending Value</div>
+        <div class="fs-3 fw-bold mt-2">@totalPendingAmount.ToString("C")</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card h-100 border-0 shadow-sm bg-success-subtle text-success-emphasis">
+      <div class="card-body text-center">
+        <div class="text-uppercase small fw-semibold text-muted">Approved Value</div>
+        <div class="fs-3 fw-bold mt-2">@totalApprovedAmount.ToString("C")</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">Request Details</h5>
+  </div>
+
+  @* the request form *@
+  <div class="card-body">
+    <EditForm Model="input" OnValidSubmit="HandleSubmit" class="row g-3" FormName="capitalReqs">
+      <DataAnnotationsValidator />
+      <ValidationSummary class="alert alert-danger" />
+
+      <div class="col-12 col-md-6">
+        <label for="amountRequested" class="form-label">Amount</label>
+        <InputNumber @bind-Value="input.AmountRequested" class="form-control" id="amountRequested" />
+        <ValidationMessage For="() => input.AmountRequested" />
+      </div>
+
+      <div class="col-12">
+        <label for="comment" class="form-label">Description</label>
+        <InputTextArea @bind-Value="input.Comment" class="form-control" id="comment" rows="4" />
+        <ValidationMessage For="() => input.Comment" />
+      </div>
+
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary">Submit Request</button>
+      </div>
+    </EditForm>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">Request Table</h5>
+  </div>
+
+  @* the requests table *@
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Amount</th>
+        <th>Description</th>
+        <th>Requested By</th>
+        <th>Status</th>
+        <th>Current Stage</th>
+      </tr>
+    </thead>
+    <tbody>
+      @foreach (var req in requests)
+      {
+        <tr @onclick="() => ViewRequest(req.Id)">
+          <td>@req.Amount.ToString("C")</td>
+          <td>@req.Description</td>
+          <td>@req.RequestedByUser?.UserName</td>
+          <td>@req.Status</td>
+          <td>@req.CurrentStage</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@* the popup modal *@
+@if (selectedRequest != null)
+{
+  <div class="modal d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content"> @* <-- this wrapper was missing *@
+
+        <div class="modal-header">
+          <h5 class="modal-title">Request Details</h5>
+          <button type="button" class="btn-close" @onclick="CloseModal"></button>
+        </div>
+
+        <div class="modal-body">
+          <p><strong>Amount:</strong> @selectedRequest.Amount.ToString("C")</p>
+          <p><strong>Description:</strong> @selectedRequest.Description</p>
+          <p><strong>Requested By:</strong> @selectedRequest.RequestedByUser?.UserName</p>
+          <p><strong>Status:</strong> @selectedRequest.Status</p>
+          <p><strong>Current Stage:</strong> @selectedRequest.CurrentStage</p>
+
+          <hr />
+          <h6>Approval History</h6>
+          @if (history.Count == 0)
+          {
+            <p class="text-muted">No actions yet.</p>
+          }
+          else
+          {
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Action</th>
+                  <th>By</th>
+                  <th>Date</th>
+                  <th>Comment</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach (var h in history)
+                {
+                  <tr>
+                    <td>@h.Action</td>
+                    <td>@h.ActionByUser?.DisplayName</td>
+                    <td>@h.ApprovedOrRejectedAt.ToString("g")</td>
+                    <td>@h.Comment</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          @if (userAction)
+          {
+            <hr />
+            <div class="d-flex gap-2 mt-3">
+              <button class="btn btn-success" @onclick="() => Approve(selectedRequest.Id)">Approve</button>
+              <button class="btn btn-danger" @onclick="() => Reject(selectedRequest.Id)">Reject</button>
+            </div>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @onclick="CloseModal">Close</button>
+        </div>
+
+      </div> @* closes modal-content *@
+    </div> @* closes modal-dialog *@
+  </div> @* closes modal *@
+}
+
+@code
+{
+  private CapitalExRequestInput input = new();
+  private List<CapitalExRequestModel> requests = new();
+  private CapitalExRequestModel? selectedRequest;
+  private List<ApprovalHistoryModel> history = new();
+  private bool userAction;
+  private string? currentUserId;
+  private int pendingCount;
+  private int approvedCount;
+  private int rejectedCount;
+  private decimal totalPendingAmount;
+  private decimal totalApprovedAmount;
+
+  private void CalculateMetrics()
+  {
+    pendingCount = requests.Count(r => r.Status == CapExStatus.Pending);
+    approvedCount = requests.Count(r => r.Status == CapExStatus.Approved);
+    rejectedCount = requests.Count(r => r.Status == CapExStatus.Rejected);
+
+    totalApprovedAmount = requests.Where(r => r.Status == CapExStatus.Approved).Sum(r => r.Amount);
+    totalPendingAmount = requests.Where(r => r.Status == CapExStatus.Pending).Sum(r => r.Amount);
+  }
+
+  private async Task ViewRequest(int requestId)
+  {
+    selectedRequest = await db.CapitalExRequestModels
+                      .Include(req => req.RequestedByUser) // here we will be loading the requests and who requested it
+                      .FirstOrDefaultAsync(req => req.Id == requestId);
+
+    history = await db.ApprovalHistoryModels
+                    .Include(hist => hist.ActionByUser)
+                    .Where(hist => hist.CapitalExId == requestId)
+                    .OrderBy(hist => hist.ApprovedOrRejectedAt)
+                    .ToListAsync();
+
+    var authState = await AuthProvider.GetAuthenticationStateAsync();
+    currentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    var currentUser = await db.Users.FindAsync(currentUserId);
+    userAction = currentUser != null && selectedRequest != null && selectedRequest.Status == CapExStatus.Pending &&
+currentUser.StaffLevel.ToString() == selectedRequest.CurrentStage.ToString(); // various checks for which action the
+  }
+
+  private async Task Approve(int requestId)
+  {
+    var req = await db.CapitalExRequestModels.FindAsync(requestId);
+    if (req == null) return;
+
+    var action = new ApprovalHistoryModel
+    {
+      CapitalExId = requestId,
+      ActionByUserId = currentUserId!,
+      Action = ApprovalChoices.Approved,
+      ApprovedOrRejectedAt = DateTime.UtcNow
+    };
+
+    db.ApprovalHistoryModels.Add(action);
+
+    var nextStage = ApprovalTierHelper.GetNextStage(req.CurrentStage, req.Amount);
+
+    if (nextStage == ApprovalStage.Finalised)
+    {
+      req.Status = CapExStatus.Approved;
+    }
+    else
+    {
+      req.CurrentStage = nextStage;
+    }
+
+    await db.SaveChangesAsync();
+    selectedRequest = null;
+    history = new();
+    await LoadRequests();
+  }
+
+  private async Task Reject(int requestId)
+  {
+    var request = await db.CapitalExRequestModels.FindAsync(requestId);
+    if (request == null) return;
+
+    var action = new ApprovalHistoryModel
+    {
+      CapitalExId = requestId,
+      ActionByUserId = currentUserId!,
+      Action = ApprovalChoices.Rejected,
+      ApprovedOrRejectedAt = DateTime.UtcNow
+    };
+    db.ApprovalHistoryModels.Add(action);
+
+    // any rejection at any point ends the whole process
+    request.Status = CapExStatus.Rejected;
+
+    await db.SaveChangesAsync();
+
+    selectedRequest = null;
+    history = new();
+    await LoadRequests();
+  }
+
+  private async Task HandleSubmit()
+  {
+    var authState = await AuthProvider.GetAuthenticationStateAsync();
+    var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    var capitalRequest = new CapitalExRequestModel
+    {
+      Amount = input.AmountRequested,
+      Description = input.Comment,
+      RequestedByUserId = userId!,
+      Status = CapExStatus.Pending,
+      CurrentStage = ApprovalStage.DepartmentManager
+    };
+
+    db.CapitalExRequestModels.Add(capitalRequest);
+    await db.SaveChangesAsync();
+
+    input = new();
+    await LoadRequests();
+  }
+
+  private async Task LoadRequests()
+  {
+    requests = await db.CapitalExRequestModels
+                .Include(req => req.RequestedByUser)
+                .OrderByDescending(req => req.CreatedAt)
+                .ToListAsync();
+    CalculateMetrics();
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await LoadRequests();
+  }
+
+  private void CloseModal() // for closing our modal
+  {
+    selectedRequest = null;
+    history = new();
+  }
+}

@@ -1,7 +1,7 @@
 public enum StaffLevel
 {
   User,
-  Manager,
+  DepartmentManager,
   FinanceDirector,
   CEO
 }
