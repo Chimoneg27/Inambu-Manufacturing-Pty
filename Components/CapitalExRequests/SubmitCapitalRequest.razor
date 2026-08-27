@@ -1,0 +1,116 @@
+@page "/capital-requests"
+
+@using System.Security.Claims
+@rendermode InteractiveServer
+@using Inambu_Manufacturing_Pty.Data
+@using Inambu_Manufacturing_Pty.Models
+@using Microsoft.EntityFrameworkCore
+@inject AuthenticationStateProvider AuthProvider
+@inject ApplicationDbContext db
+
+<PageTitle>Submit Capital Request</PageTitle>
+
+<h1 class="mb-4">Submit Capital Request</h1>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">Request Details</h5>
+  </div>
+
+  <div class="card-body">
+    <EditForm Model="input" OnValidSubmit="HandleSubmit" class="row g-3" FormName="capitalReqs">
+      <DataAnnotationsValidator />
+      <ValidationSummary class="alert alert-danger" />
+
+      <div class="col-12 col-md-6">
+        <label for="amountRequested" class="form-label">Amount</label>
+        <InputNumber @bind-Value="input.AmountRequested" class="form-control" id="amountRequested" />
+        <ValidationMessage For="() => input.AmountRequested" />
+      </div>
+
+      <div class="col-12">
+        <label for="comment" class="form-label">Description</label>
+        <InputTextArea @bind-Value="input.Comment" class="form-control" id="comment" rows="4" />
+        <ValidationMessage For="() => input.Comment" />
+      </div>
+
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary">Submit Request</button>
+      </div>
+    </EditForm>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">Request Table</h5>
+  </div>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Amount</th>
+      <th>Description</th>
+      <th>Requested By</th>
+      <th>Status</th>
+      <th>Current Stage</th>
+    </tr>
+  </thead>
+  <tbody>
+    @foreach (var req in requests)
+    {
+      <tr>
+        <td>@req.Amount.ToString("C")</td>
+        <td>@req.Description</td>
+        <td>@req.RequestedByUser?.UserName</td>
+        <td>@req.Status</td>
+        <td>@req.CurrentStage</td>
+      </tr>
+    }
+  </tbody>
+</table>
+</div>
+
+@code
+{
+  private CapitalExRequestInput input = new();
+  private List<CapitalExRequestModel> requests = new();
+
+  private async Task HandleSubmit()
+  {
+    var authState = await AuthProvider.GetAuthenticationStateAsync();
+    var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    var capitalRequest = new CapitalExRequestModel
+    {
+      Amount = input.AmountRequested,
+      Description = input.Comment,
+      RequestedByUserId = userId!,
+      Status = CapExStatus.Pending,
+      CurrentStage = ApprovalStage.DepartmentManager
+    };
+
+    db.CapitalExRequestModels.Add(capitalRequest);
+    await db.SaveChangesAsync();
+
+    input = new();
+    await LoadRequests();
+  }
+
+  private async Task LoadRequests()
+  {
+    requests = await db.CapitalExRequestModels
+                .Include(req => req.RequestedByUser)
+                .OrderByDescending(req => req.CreatedAt)
+                .ToListAsync();
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await LoadRequests();
+  }
+
+  private async Task ShowModal(){
+    return;
+  }
+}
