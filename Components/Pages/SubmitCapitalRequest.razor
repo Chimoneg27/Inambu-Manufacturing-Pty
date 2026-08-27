@@ -1,0 +1,147 @@
+@page "/capital-requests"
+
+@using System.Security.Claims
+@rendermode InteractiveServer
+@using Inambu_Manufacturing_Pty.Models
+@inject AuthenticationStateProvider AuthProvider
+@using Inambu_Manufacturing_Pty.Services;
+@inject ICapExService CapExService
+@inject IApprovalService ApprovalService
+@using Inambu_Manufacturing_Pty.Components.CapitalExRequests
+
+<PageTitle>Submit Capital Request</PageTitle>
+
+<h1 class="mb-4">Submit Capital Request</h1>
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-5 g-3 mb-4">
+  <MetricCards Label="Pending" Value='@pendingCount.ToString()' Variant="warning" />
+  <MetricCards Label="Approved" Value='@approvedCount.ToString()' Variant="warning" />
+  <MetricCards Label="Rejected" Value='@rejectedCount.ToString()' Variant="warning" />
+  <MetricCards Label="Pending Value" Value='@totalPendingAmount.ToString()' Variant="warning" />
+  <MetricCards Label="Approved Value" Value='@totalApprovedAmount.ToString()' Variant="warning" />
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">Request Details</h5>
+  </div>
+
+  @* the request form *@
+  <div class="card-body">
+    <EditForm Model="input" OnValidSubmit="HandleSubmit" class="row g-3" FormName="capitalReqs">
+      <DataAnnotationsValidator />
+      <ValidationSummary class="alert alert-danger" />
+
+      <CapitalExRequestForm Model="input" />
+
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary">Submit Request</button>
+      </div>
+    </EditForm>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">Request Table</h5>
+  </div>
+
+  @* the requests table *@
+  <CapitalExRequestTable requests="requests" ViewRequest="ViewRequest" />
+</div>
+
+@* the popup modal *@
+<CapitalRequestDetailModal Request="selectedRequest" History="history" ShowActions="userAction" OnApprove="Approve"
+                           OnReject="Reject" OnClose="CloseModal" />
+
+@code
+{
+  private CapitalExRequestInput input = new();
+  private List<CapitalExRequestModel> requests = new();
+  private CapitalExRequestModel? selectedRequest;
+  private List<ApprovalHistoryModel> history = new();
+  private bool userAction;
+  private string? currentUserId;
+  private int pendingCount;
+  private int approvedCount;
+  private int rejectedCount;
+  private decimal totalPendingAmount;
+  private decimal totalApprovedAmount;
+
+  private void CalculateMetrics()
+  {
+    pendingCount = requests.Count(r => r.Status == CapExStatus.Pending);
+    approvedCount = requests.Count(r => r.Status == CapExStatus.Approved);
+    rejectedCount = requests.Count(r => r.Status == CapExStatus.Rejected);
+
+    totalApprovedAmount = requests.Where(r => r.Status == CapExStatus.Approved).Sum(r => r.Amount);
+    totalPendingAmount = requests.Where(r => r.Status == CapExStatus.Pending).Sum(r => r.Amount);
+  }
+
+  private async Task ViewRequest(int requestId)
+  {
+    selectedRequest = await CapExService.GetByIdAsync(requestId);
+    history = await ApprovalService.GetHistoryAsync(requestId);
+
+    var authState = await AuthProvider.GetAuthenticationStateAsync();
+    currentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    var currentUser = string.IsNullOrEmpty(currentUserId)
+        ? null
+        : await CapExService.GetUserAsync(currentUserId);
+
+    userAction = currentUser != null && selectedRequest != null && selectedRequest.Status == CapExStatus.Pending &&
+        currentUser.StaffLevel.ToString() == selectedRequest.CurrentStage.ToString();
+  }
+
+private async Task Approve(int requestId)
+{
+  if (string.IsNullOrEmpty(currentUserId)) return;
+  await ApprovalService.ApproveAsync(requestId, currentUserId);
+  await ResetAfterAction();
+}
+
+  private async Task ResetAfterAction()
+  {
+    selectedRequest = null;
+    history = new();
+    await LoadRequests();
+  }
+
+
+private async Task Reject(int requestId)
+{
+  if (string.IsNullOrEmpty(currentUserId)) return;
+  await ApprovalService.RejectAsync(requestId, currentUserId);
+  await ResetAfterAction();
+}
+
+  private async Task HandleSubmit()
+  {
+    var authState = await AuthProvider.GetAuthenticationStateAsync();
+    var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (string.IsNullOrEmpty(userId)) return;
+
+    await CapExService.CreateAsync(input, userId);
+
+    input = new();
+    await LoadRequests();
+  }
+
+  private async Task LoadRequests()
+  {
+    requests = await CapExService.GetAllAsync();
+    CalculateMetrics();
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await LoadRequests();
+  }
+
+  private void CloseModal() // for closing our modal
+  {
+    selectedRequest = null;
+    history = new();
+  }
+}

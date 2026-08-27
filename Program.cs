@@ -7,6 +7,8 @@ using Inambu_Manufacturing_Pty.Components.Account;
 using Inambu_Manufacturing_Pty.Data;
 using System.Security.Claims;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Inambu_Manufacturing_Pty.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +20,11 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+
+// custom services
+builder.Services.AddScoped<IMeasurementService, MeasurementService>();
+builder.Services.AddScoped<ICapExService, CapExService>();
+builder.Services.AddScoped<IApprovalService, ApprovalService>();
 
 builder.Services.AddAuthentication(options =>
     {

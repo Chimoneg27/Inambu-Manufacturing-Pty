@@ -1,0 +1,35 @@
+@using Inambu_Manufacturing_Pty.Models
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>Amount</th>
+        <th>Description</th>
+        <th>Requested By</th>
+        <th>Status</th>
+        <th>Current Stage</th>
+      </tr>
+    </thead>
+    <tbody>
+      @foreach (var req in requests)
+      {
+        <tr @onclick="() => ViewRequest.InvokeAsync(req.Id)">
+          <td>@req.Amount.ToString("C")</td>
+          <td>@req.Description</td>
+          <td>@req.RequestedByUser?.UserName</td>
+          <td>@req.Status</td>
+          <td>@req.CurrentStage</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@code {
+  [Parameter, EditorRequired]
+  public List<CapitalExRequestModel> requests { get; set; } = null!;
+
+  [Parameter]
+  public EventCallback<int> ViewRequest { get; set; }
+}

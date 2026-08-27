@@ -1,11 +1,10 @@
 ﻿@page "/"
 @using Inambu_Manufacturing_Pty.Components.Measurements
-@using Microsoft.EntityFrameworkCore
-@using Inambu_Manufacturing_Pty.Data
+@using Inambu_Manufacturing_Pty.Services;
 @using Inambu_Manufacturing_Pty.Models
 @rendermode InteractiveServer
 @using System.Security.Claims;
-@inject ApplicationDbContext DbContext
+@inject IMeasurementService MeasurementService
 @inject AuthenticationStateProvider AuthProvider
 
 <PageTitle>Inambu Manufacturing (Pty) Ltd</PageTitle>
@@ -54,14 +53,11 @@
     CurrentUserId = authState.User
         .FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-    ProductionLines = await DbContext.ProductionLines.ToListAsync();
-    Measurements = await DbContext.Measurements
-            .Include(m => m.ApplicationUser)
-            .Include(m => m.ProductionLine)
-            .OrderByDescending(m => m.CapturedAtUtc) // we will now see the latest entries in the table
-            .ToListAsync();
+    ProductionLines = await MeasurementService.GetProductionLinesAsync();
+    Measurements = await MeasurementService.GetMeasurementsAsync();
 
-    if (ProductionLines.Any() && Input.ProductionLineId == 0)
+
+    if (ProductionLines.Any() && Input.ProductionLineId == 0) // to prevent our earlier @bind value issue
     {
       Input.ProductionLineId = ProductionLines.First().Id;
     }
@@ -71,25 +67,15 @@
 
   private async Task DeleteMeasurement(int id)
   {
-    var capture = await DbContext.Measurements
-      .Include(measurement => measurement.ApplicationUser)
-      .FirstOrDefaultAsync(measurement => measurement.Id == id);
-
-    if (capture is null)
-    {
-      return;
-    }
-
     var authState = await AuthProvider.GetAuthenticationStateAsync();
     var userId = await ResolveCurrentUserIdAsync(authState.User);
 
-    if (capture.ApplicationUserId != userId)
+    if (string.IsNullOrWhiteSpace(userId))
     {
       return;
     }
 
-    DbContext.Measurements.Remove(capture);
-    await DbContext.SaveChangesAsync();
+    var deleted = await MeasurementService.DeleteMeasurementAsync(id, userId);
     await LoadDataAsync();
   }
 
@@ -112,16 +98,10 @@
       Length = Input.Length,
       Depth = Input.Depth,
       Passed = Input.Passed,
-
-      CapturedAtUtc = DateTime.UtcNow,
-      ApplicationUserId = userId,
-
       ProductionLineId = Input.ProductionLineId
     };
 
-    DbContext.Measurements.Add(measurement); // stage the new measurement entry in memory
-    await DbContext.SaveChangesAsync(); // then we we write it to our sql server
-
+    await MeasurementService.AddMeasurementAsync(measurement, userId);
     Input = new(); // clear the form after successful submission
     await LoadDataAsync();
   }
@@ -131,56 +111,8 @@
     return user.FindFirstValue(ClaimTypes.NameIdentifier);
   }
 
-  private MeasurementStatistics CalculateStats(IEnumerable<decimal> values)
-  {
-    var numbers = values.ToList();
-
-    if (numbers.Count == 0)
-    {
-      return new MeasurementStatistics();
-    }
-
-    var sum = numbers.Sum();
-    var mean = sum / numbers.Count();
-    var variance = numbers.Sum(n => (n - mean) * (n - mean)) / numbers.Count;
-    var standardDeviation = (decimal)Math.Sqrt((double)variance);
-
-    return new MeasurementStatistics
-    {
-      Highest = numbers.Max(),
-      Lowest = numbers.Min(),
-      Variance = variance,
-      Mean = mean,
-      Sum = sum,
-      StandardDeviation = standardDeviation
-    };
-
-  }
-
   private void RecalculateStatistics()
   {
-    Statistics["Temperature"] = CalculateStats(
-      Measurements.Select(m => m.Temperature)
-    );
-
-    Statistics["Humidity"] = CalculateStats(
-      Measurements.Select(m => m.Humidity)
-    );
-
-    Statistics["Weight"] = CalculateStats(
-      Measurements.Select(m => m.Weight)
-    );
-
-    Statistics["Width"] = CalculateStats(
-      Measurements.Select(m => m.Width)
-    );
-
-    Statistics["Length"] = CalculateStats(
-      Measurements.Select(m => m.Length)
-    );
-
-    Statistics["Depth"] = CalculateStats(
-      Measurements.Select(m => m.Depth)
-    );
+    Statistics = MeasurementService.CalculateStatistics(Measurements);
   }
 }
