@@ -23,6 +23,8 @@ builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuth
 
 // custom services
 builder.Services.AddScoped<IMeasurementService, MeasurementService>();
+builder.Services.AddScoped<ICapExService, CapExService>();
+builder.Services.AddScoped<IApprovalService, ApprovalService>();
 
 builder.Services.AddAuthentication(options =>
     {

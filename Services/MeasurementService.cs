@@ -1,8 +1,5 @@
-using System.Data.Common;
-using System.Diagnostics.Metrics;
 using Inambu_Manufacturing_Pty.Data;
 using Inambu_Manufacturing_Pty.Models;
-using Inambu_Manufacturing_Pty.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Inambu_Manufacturing_Pty.Services

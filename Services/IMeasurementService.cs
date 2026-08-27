@@ -1,6 +1,5 @@
 using Inambu_Manufacturing_Pty.Models;
 
-
 namespace Inambu_Manufacturing_Pty.Services
 {
   // the shape of our measurement service
