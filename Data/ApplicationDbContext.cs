@@ -10,6 +10,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
   public DbSet<ProductionLine> ProductionLines { get; set; } // registering the productionLine model
   public DbSet<MeasurementInputModel> Measurements { get; set; }
   public DbSet<CapitalExRequestModel> CapitalExRequestModels { get; set; }
+  public DbSet<ApprovalHistoryModel> ApprovalHistoryModels { get; set; }
 
   protected override void OnModelCreating(ModelBuilder builder)
   {
