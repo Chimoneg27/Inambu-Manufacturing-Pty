@@ -2,11 +2,11 @@
 
 @using System.Security.Claims
 @rendermode InteractiveServer
-@using Inambu_Manufacturing_Pty.Data
 @using Inambu_Manufacturing_Pty.Models
-@using Microsoft.EntityFrameworkCore
 @inject AuthenticationStateProvider AuthProvider
-@inject ApplicationDbContext db
+@using Inambu_Manufacturing_Pty.Services;
+@inject ICapExService CapExService
+@inject IApprovalService ApprovalService
 @using Inambu_Manufacturing_Pty.Components.CapitalExRequests
 
 <PageTitle>Submit Capital Request</PageTitle>
@@ -51,7 +51,8 @@
 </div>
 
 @* the popup modal *@
-<CapitalRequestDetailModal Request="selectedRequest" History="history" ShowActions="userAction" OnApprove="Approve" OnReject="Reject" OnClose="CloseModal" />
+<CapitalRequestDetailModal Request="selectedRequest" History="history" ShowActions="userAction" OnApprove="Approve"
+                           OnReject="Reject" OnClose="CloseModal" />
 
 @code
 {
@@ -79,96 +80,49 @@
 
   private async Task ViewRequest(int requestId)
   {
-    selectedRequest = await db.CapitalExRequestModels
-                      .Include(req => req.RequestedByUser) // here we will be loading the requests and who requested it
-                      .FirstOrDefaultAsync(req => req.Id == requestId);
-
-    history = await db.ApprovalHistoryModels
-                    .Include(hist => hist.ActionByUser)
-                    .Where(hist => hist.CapitalExId == requestId)
-                    .OrderBy(hist => hist.ApprovedOrRejectedAt)
-                    .ToListAsync();
+    selectedRequest = await CapExService.GetByIdAsync(requestId);
+    history = await ApprovalService.GetHistoryAsync(requestId);
 
     var authState = await AuthProvider.GetAuthenticationStateAsync();
     currentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-    var currentUser = await db.Users.FindAsync(currentUserId);
+    var currentUser = string.IsNullOrEmpty(currentUserId)
+        ? null
+        : await CapExService.GetUserAsync(currentUserId);
+
     userAction = currentUser != null && selectedRequest != null && selectedRequest.Status == CapExStatus.Pending &&
-currentUser.StaffLevel.ToString() == selectedRequest.CurrentStage.ToString(); // various checks for which action the
+        currentUser.StaffLevel.ToString() == selectedRequest.CurrentStage.ToString();
   }
 
-  private async Task Approve(int requestId)
+private async Task Approve(int requestId)
+{
+  if (string.IsNullOrEmpty(currentUserId)) return;
+  await ApprovalService.ApproveAsync(requestId, currentUserId);
+  await ResetAfterAction();
+}
+
+  private async Task ResetAfterAction()
   {
-    var req = await db.CapitalExRequestModels.FindAsync(requestId);
-    if (req == null) return;
-
-    var action = new ApprovalHistoryModel
-    {
-      CapitalExId = requestId,
-      ActionByUserId = currentUserId!,
-      Action = ApprovalChoices.Approved,
-      ApprovedOrRejectedAt = DateTime.UtcNow
-    };
-
-    db.ApprovalHistoryModels.Add(action);
-
-    var nextStage = ApprovalTierHelper.GetNextStage(req.CurrentStage, req.Amount);
-
-    if (nextStage == ApprovalStage.Finalised)
-    {
-      req.Status = CapExStatus.Approved;
-    }
-    else
-    {
-      req.CurrentStage = nextStage;
-    }
-
-    await db.SaveChangesAsync();
     selectedRequest = null;
     history = new();
     await LoadRequests();
   }
 
-  private async Task Reject(int requestId)
-  {
-    var request = await db.CapitalExRequestModels.FindAsync(requestId);
-    if (request == null) return;
 
-    var action = new ApprovalHistoryModel
-    {
-      CapitalExId = requestId,
-      ActionByUserId = currentUserId!,
-      Action = ApprovalChoices.Rejected,
-      ApprovedOrRejectedAt = DateTime.UtcNow
-    };
-    db.ApprovalHistoryModels.Add(action);
-
-    // any rejection at any point ends the whole process
-    request.Status = CapExStatus.Rejected;
-
-    await db.SaveChangesAsync();
-
-    selectedRequest = null;
-    history = new();
-    await LoadRequests();
-  }
+private async Task Reject(int requestId)
+{
+  if (string.IsNullOrEmpty(currentUserId)) return;
+  await ApprovalService.RejectAsync(requestId, currentUserId);
+  await ResetAfterAction();
+}
 
   private async Task HandleSubmit()
   {
     var authState = await AuthProvider.GetAuthenticationStateAsync();
     var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (string.IsNullOrEmpty(userId)) return;
 
-    var capitalRequest = new CapitalExRequestModel
-    {
-      Amount = input.AmountRequested,
-      Description = input.Comment,
-      RequestedByUserId = userId!,
-      Status = CapExStatus.Pending,
-      CurrentStage = ApprovalStage.DepartmentManager
-    };
-
-    db.CapitalExRequestModels.Add(capitalRequest);
-    await db.SaveChangesAsync();
+    await CapExService.CreateAsync(input, userId);
 
     input = new();
     await LoadRequests();
@@ -176,10 +130,7 @@ currentUser.StaffLevel.ToString() == selectedRequest.CurrentStage.ToString(); //
 
   private async Task LoadRequests()
   {
-    requests = await db.CapitalExRequestModels
-                .Include(req => req.RequestedByUser)
-                .OrderByDescending(req => req.CreatedAt)
-                .ToListAsync();
+    requests = await CapExService.GetAllAsync();
     CalculateMetrics();
   }
 
