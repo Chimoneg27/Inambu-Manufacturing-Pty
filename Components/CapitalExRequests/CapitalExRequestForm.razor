@@ -1,0 +1,18 @@
+@using Inambu_Manufacturing_Pty.Models
+
+<div class="col-12 col-md-6">
+  <label for="amountRequested" class="form-label">Amount</label>
+  <InputNumber @bind-Value="Model.AmountRequested" class="form-control" id="amountRequested" />
+  <ValidationMessage For="() => Model.AmountRequested" />
+</div>
+
+<div class="col-12">
+  <label for="comment" class="form-label">Description</label>
+  <InputTextArea @bind-Value="Model.Comment" class="form-control" id="comment" rows="4" />
+  <ValidationMessage For="() => Model.Comment" />
+</div>
+
+@code {
+  [Parameter, EditorRequired]
+  public CapitalExRequestInput Model { get; set; } = null!;
+}

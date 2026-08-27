@@ -1,0 +1,91 @@
+@using System.Diagnostics.Metrics
+@using Inambu_Manufacturing_Pty.Models
+
+@if (Request != null)
+{
+  <div class="modal d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        @* the header *@
+        <div class="modal-header">
+          <h5 class="modal-title">Request Details</h5>
+          <button type="button" class="btn-close" @onclick="() => OnClose.InvokeAsync()"></button>
+        </div>
+
+        @* the body *@
+        <div class="modal-body">
+          <p><strong>Amount:</strong> @Request.Amount.ToString("C")</p>
+          <p><strong>Description:</strong> @Request.Description</p>
+          <p><strong>Requested By:</strong> @Request.RequestedByUser?.UserName</p>
+          <p><strong>Status:</strong> @Request.Status</p>
+          <p><strong>Current Stage:</strong> @Request.CurrentStage</p>
+
+          <hr />
+          <h6>Approval History</h6>
+
+          @if (History.Count == 0)
+          {
+            <p class="text-muted">No actions yet.</p>
+          }
+          else
+          {
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Action</th>
+                  <th>By</th>
+                  <th>Date</th>
+                  <th>Comment</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach (var h in History)
+                {
+                  <tr>
+                    <td>@h.Action</td>
+                    <td>@h.ActionByUser?.DisplayName</td>
+                    <td>@h.ApprovedOrRejectedAt.ToString("g")</td>
+                    <td>@h.Comment</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          @if (ShowActions)
+          {
+            <hr />
+            <div class="d-flex gap-2 mt-3">
+              <button class="btn btn-success" @onclick="() => OnApprove.InvokeAsync(Request.Id)">Approve</button>
+              <button class="btn btn-danger" @onclick="() => OnReject.InvokeAsync(Request.Id)">Reject</button>
+            </div>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @onclick="() => OnClose.InvokeAsync()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+@code {
+  [Parameter, EditorRequired]
+  public CapitalExRequestModel? Request { get; set; }
+
+  [Parameter, EditorRequired]
+  public List<ApprovalHistoryModel> History { get; set; } = new();
+
+  [Parameter]
+  public bool ShowActions { get; set; }
+
+  [Parameter]
+  public EventCallback<int> OnApprove { get; set; }
+
+  [Parameter]
+  public EventCallback<int> OnReject { get; set; }
+
+  [Parameter]
+  public EventCallback OnClose { get; set; }
+}
